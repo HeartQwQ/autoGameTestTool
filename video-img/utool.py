@@ -20,17 +20,17 @@ warnings.filterwarnings("ignore", message="No ccache found")
 
 
 def process(
-        video_path: str | Path = Path("data") / "1.mp4",
-        data_json=Path("data") / "data.json",
+        video_path: str = Path("data") / "1.mp4",
+        data_json: str = Path("data") / "data.json",
         start_sec: int = 0,
         end_sec: int = None,
         interval: int = 1,
         scope: bool = False,
         roi: tuple = None,
         min_score: float = 0.8,
-        ifs: list | None = None,
-        out_dir: str | Path = "result",
-        log_dir: str | Path = Path("logs"),
+        ifs: list = None,
+        out_dir: str = "result",
+        log_dir: str = "logs",
         log_name: str = "process",
         log_dir_name: str = datetime.now().strftime(f"%Y-%m-%d_%H·%M·%S") + ".log"
 ) -> set[str]:
@@ -51,7 +51,7 @@ def process(
         :param log_dir_name: 日志文件名，默认当前时间
     """
     # --------------- 路径配置 ---------------
-    video_path, data_json, out_dir = Path(video_path), Path(data_json), Path(out_dir)
+    video_path, data_json, out_dir, log_dir = Path(video_path), Path(data_json), Path(out_dir), Path(log_dir)
 
     if not video_path.exists():
         raise RuntimeError(f"视频不存在：{video_path}")
@@ -73,19 +73,18 @@ def process(
     logger.info(f"  总帧数: {total_frames}")
     logger.info(f"  帧率: {fps:.2f} FPS")
     logger.info(f"  时长: {duration:.2f} 秒")
-    logger.info(f"  输出目录: {out_dir}")
+    logger.info(f"  识别结果输出目录: {out_dir}")
     logger.info(f"  帧间隔: {interval}")
 
     if start_frame >= total_frames:
         raise RuntimeError(f"起始秒={start_sec} s 超出视频总长 {total_frames / fps:.1f} s")
 
-    # 定位到起始帧
+    # 定位到起始帧并保存为图片
     cap.set(cv2.CAP_PROP_POS_FRAMES, start_frame)
+    current_frame_id = start_frame
     ret, frame = cap.read()
     if not ret:
-        raise RuntimeError(f"无法读取视频第 {start_sec} 秒（frame #{start_frame}）")
-
-    # 保存图片
+        raise RuntimeError(f"无法读取视频第 {start_sec} 秒")
     start_sec_path = Path(out_dir) / f"frame{start_sec}s.jpg"
     cv2.imwrite(str(start_sec_path), frame)
     logger.info(f"已定位到视频第 {start_sec} 秒，已保存为图片 → {start_sec_path}")
@@ -112,30 +111,37 @@ def process(
     if ocr:
         logger.info("OCR初始化成功！")
 
-    # --------------- 按 interval 逐帧 OCR，保存带框图片 ---------------
-    frame_id = start_frame
+    # --------------- OCR 循环 ---------------
     frame_cnt = 0   # 单次识别耗时
     total_time = 0.0  # 平均耗时
+    hit_items = set()
+
     total_sec = total_time / 1000  # 毫秒 → 秒
     minutes, seconds = divmod(total_sec, 60)
     logger.info("开始OCR识别，帧间隔=%d，ROI=%s", interval, roi)
     with open(data_json, "r", encoding="utf-8") as f:
         data = json.load(f)
     items = [d["物品名称"] for d in data]
-    hit_items = set()
     logger.info(f"识别列表：{items}")
 
     ifs = ifs or []  # 生成器/元组/集合都转成列表
     must_texts = {d["文案"]: d.get("识别范围") for d in ifs if d.get("识别范围")}
 
-    while frame_id < total_frames:
-        logger.debug("=" * 50)
-        logger.debug(f"第{frame_id}帧")
-        cap.set(cv2.CAP_PROP_POS_FRAMES, frame_id)
+    while current_frame_id < total_frames:
+        # 如果当前帧需要处理
+        if (current_frame_id - start_frame) % interval == 0:
+            # 处理 frame（复用上面修复后的逻辑）
+            # ... [must/or 条件判断 + 物品命中逻辑] ...
+            pass
         ret, frame = cap.read()
-        if not ret:  # 保险：万一读失败也跳出
+        if not ret:
             logger.info("已读到视频结尾，OCR 循环结束")
             break
+        current_frame_id += 1
+
+        logger.debug("=" * 50)
+        logger.debug(f"第{current_frame_id}帧")
+
 
         # ① 记录开始时间（毫秒级）
         t_start = time.perf_counter()
@@ -164,15 +170,12 @@ def process(
             if hit_rec is None or item in hit_items:
                 continue
 
-            # 必须 / 或者 条件
+            # 额外判断条件
             if must_texts and not must_texts.issubset(texts):
-                continue
-            if or_texts and or_texts.isdisjoint(texts):
                 continue
 
             hit_items.add(item)
             preview = frame.copy()
-
 
             # ① 画「必须项」框（红色）
             for rec in ocr_records:
@@ -180,14 +183,6 @@ def process(
                     if must in rec[0]:
                         x, y, w, h = rec[1]
                         cv2.rectangle(preview, (x, y), (w, h),(0, 0, 255), 2)
-                        break
-
-            # ② 画「或者项」框（蓝色）
-            for rec in ocr_records:
-                for or_txt in or_texts:
-                    if or_txt in rec[0]:
-                        x, y, w, h = rec[1]
-                        cv2.rectangle(preview, (x, y), (w, h),(255, 0, 0), 2)
                         break
 
             box, score = hit_rec[1], hit_rec[2]
@@ -210,10 +205,10 @@ def process(
         total_time += elapsed
         frame_cnt += 1
 
-        logger.debug(f"帧 {frame_id} 处理耗时 {elapsed:.2f} ms")
+        logger.debug(f"帧 {current_frame_id} 处理耗时 {elapsed:.2f} ms")
 
         # 5. 步进到下一采样帧
-        frame_id += interval
+        current_frame_id += interval
 
     # --------------- 循环结束，打印汇总 ---------------
     logger.info("=" * 50)

@@ -220,4 +220,9 @@ __pycache__/
 .idea/ 
 venv/ 
 .env 
-.mp4 
+
+# Ignore large media files
+*.mp4
+*.avi
+*.mov
+*.mkv
