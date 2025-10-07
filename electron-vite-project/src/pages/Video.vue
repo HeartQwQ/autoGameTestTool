@@ -1,14 +1,19 @@
 <!-- DropFile.vue -->
 <template>
-  <Button @click="selectAndProcess">选择文件并处理</Button>
-  <!-- <img :src="imgSrc" style="width:100%;height:auto;" /> -->
-  <div class="w-[450px]">
-    <AspectRatio :ratio="16 / 9">
-      <img :src="imgSrc" alt="本地图片" class="rounded-md object-cover w-full h-full bg-amber-100">
-    </AspectRatio>
-    <AspectRatio :ratio="16 / 9">
-      <img src="../img/frame_000000.jpg" alt="本地图片" class="rounded-md object-cover w-full h-full bg-amber-100">
-    </AspectRatio>
+  <div>
+    <Alert>
+      <AlertTitle>注意！</AlertTitle>
+      <AlertDescription>
+        您可以通过 CLI 向应用添加组件。
+      </AlertDescription>
+    </Alert>
+    <Button @click="selectAndProcess">选择文件并处理</Button>
+    <div class="w-[450px]">
+      <AspectRatio :ratio="16 / 9">
+        <img :src="imgSrc" alt="本地图片" class="rounded-md object-cover w-full h-full bg-amber-100">
+      </AspectRatio>
+    </div>
+    <Toaster />
   </div>
 </template>
 
@@ -16,17 +21,45 @@
 import { ref } from 'vue'
 import Button from '@/components/ui/button/Button.vue';
 import { AspectRatio } from '@/components/ui/aspect-ratio'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { toast } from 'vue-sonner'
+import 'vue-sonner/style.css'
 
 const imgSrc = ref('')
+const { ipcRenderer } = window
+
+ipcRenderer.on('py:output', (_, boxedPath: string) => {
+  console.log('Python 输出:', boxedPath)
+  toast.info('提示：', {
+    description: boxedPath,
+    action: {
+      label: 'Undo',
+      onClick: () => console.log('Undo'),
+    },
+  })
+})
+
+// 监听错误
+ipcRenderer.on('py:error', (_, err) => {
+  console.error('Python 错误:', err)
+  // toast.error('错误！', {
+  //   description: err,
+  //   action: {
+  //     label: 'Details',
+  //     onClick: () => console.log(err),
+  //   },
+  // })
+})
+
 
 async function selectAndProcess() {
-  const paths = await window.ipcRenderer.selectFiles()
+  // 调用主进程的 select-files 处理器，弹出文件选择对话框
+  const paths = await (ipcRenderer as any).selectFiles()
 
-  for (const p of paths) {
-    console.log('原始路径:', p)
-    const boxedPath = await window.ipcRenderer.processFile(p)
-    console.log('Python 处理后的路径:', boxedPath)
-    imgSrc.value = "src/img/frame_000000.jpg"
-  }
+  // 逐个处理选中的文件路径
+  console.log('原始路径:', paths[0])
+  const boxedPath = await (ipcRenderer as any).processFile(paths[0])
+  console.log('Python 处理后的路径:', boxedPath)
+  imgSrc.value = "src/img/frame_000000.jpg"
 }
 </script>

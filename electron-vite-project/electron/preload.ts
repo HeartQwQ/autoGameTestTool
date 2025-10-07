@@ -21,6 +21,6 @@ contextBridge.exposeInMainWorld('ipcRenderer', {
 
   // You can expose other APTs you need here.
   selectFiles: () => ipcRenderer.invoke('select-files'),
-  
+
   processFile: (p: string) => ipcRenderer.invoke('py:process', p),
 })
