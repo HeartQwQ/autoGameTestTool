@@ -1,27 +1,17 @@
 <!-- DropFile.vue -->
 <template>
   <div>
-    <Alert>
-      <AlertTitle>注意！</AlertTitle>
-      <AlertDescription>
-        您可以通过 CLI 向应用添加组件。
-      </AlertDescription>
-    </Alert>
     <Button @click="selectAndProcess">选择文件并处理</Button>
-    <div class="w-[450px]">
-      <AspectRatio :ratio="16 / 9">
-        <img :src="imgSrc" alt="本地图片" class="rounded-md object-cover w-full h-full bg-amber-100">
-      </AspectRatio>
-    </div>
-    <Toaster />
+    <!-- <AspectRatio :ratio="16 / 9">
+      <img :src="imgSrc" alt="本地图片" class="rounded-md object-cover w-full h-full bg-amber-100">
+    </AspectRatio> -->
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref } from 'vue'
 import Button from '@/components/ui/button/Button.vue';
-import { AspectRatio } from '@/components/ui/aspect-ratio'
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+// import { AspectRatio } from '@/components/ui/aspect-ratio'
 import { toast } from 'vue-sonner'
 import 'vue-sonner/style.css'
 

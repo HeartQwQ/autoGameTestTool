@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import Layouts from './components/Layouts.vue'
-import { Toaster } from '@/components/ui/sonner'
+import Layouts from './components/sidebar/Layouts.vue'
+import { Sonner } from '@/components/ui/sonner'
 </script>
 
 <template>
   <Layouts />
-  <Toaster position="top-right"/>
+  <Sonner position="top-right"/>
 </template>
 
 <style scoped>

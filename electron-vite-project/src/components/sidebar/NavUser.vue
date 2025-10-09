@@ -29,15 +29,13 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar"
 
-const props = defineProps<{
+defineProps<{
   user: {
     name: string
     email: string
     avatar: string
   }
 }>()
-
-console.log("user props:", props.user)
 
 const { isMobile } = useSidebar()
 </script>
@@ -109,7 +107,7 @@ const { isMobile } = useSidebar()
           <DropdownMenuSeparator />
           <DropdownMenuItem>
             <LogOut />
-            Log out
+            退出登录
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

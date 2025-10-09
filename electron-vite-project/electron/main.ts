@@ -39,6 +39,8 @@ let win: BrowserWindow | null
 function createWindow() {
   // 创建一个新的 BrowserWindow 实例
   win = new BrowserWindow({
+    width: 1280,  // 窗口宽度
+    height: 760, // 窗口高度
     // 设置窗口图标（Electron 会自动处理不同平台格式）
     icon: path.join(process.env.VITE_PUBLIC, 'electron-vite.svg'),
     // WebPreferences 配置渲染进程的安全与集成功能
