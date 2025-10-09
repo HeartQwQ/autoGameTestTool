@@ -32,7 +32,9 @@ import {
         </div>
       </header>
       <!-- 页面内容 -->
-      <RouterView />
+      <div class="p-4">
+        <RouterView />
+      </div>
     </SidebarInset>
   </SidebarProvider>
 </template>
