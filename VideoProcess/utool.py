@@ -9,7 +9,6 @@ import re
 import logging
 
 import cv2
-import numpy as np
 from paddleocr import PaddleOCR
 
 from log import setup_logger
@@ -106,7 +105,7 @@ def process(
         use_doc_unwarping=False,  # 不使用文本图像矫正模型
         use_textline_orientation=False,  # 不使用文本行方向分类模型
         device="gpu",  # 使用GPU推理
-        text_rec_score_thresh=0.9,  # 置信度阈值
+        text_rec_score_thresh=min_score,  # 置信度阈值
     )
     if ocr:
         logger.info("OCR初始化成功！")
