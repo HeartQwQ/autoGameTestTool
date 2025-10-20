@@ -23,4 +23,6 @@ contextBridge.exposeInMainWorld('ipcRenderer', {
   selectFiles: () => ipcRenderer.invoke('select-files'),
 
   processFile: (p: string) => ipcRenderer.invoke('py:process', p),
+
+  getDuration: (p: string) => ipcRenderer.invoke('get-video-duration', p),
 })

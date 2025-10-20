@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url'
 import { spawn } from 'child_process'
 // Node.js 路径处理模块
 import path from 'node:path'
+import { execFile } from 'child_process'
 
 // 获取当前主进程脚本（main.js）所在目录（即 dist-electron）
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -87,10 +88,13 @@ app.on('activate', () => {
   }
 })
 
+
 // whenReady: 当 Electron 应用准备就绪后执行
 // createWindow: 创建主窗口
 app.whenReady().then(createWindow)
 
+
+// --------------------------------- IPC通信 ---------------------------------
 // IPC 主进程监听：渲染进程请求选择文件
 ipcMain.handle('select-files', async () => {
   // 弹出系统文件选择对话框
@@ -103,43 +107,51 @@ ipcMain.handle('select-files', async () => {
   return canceled ? [] : filePaths // 绝对路径数组
 })
 
+
 // IPC 主进程监听：调用 Python 脚本处理文件
-ipcMain.handle('py:process', async (_, filePath: string) => {
-  const userDataPath = app.getPath('userData') // 👈 获取可写目录
-  let pyScriptPath = null
-  // 启动 Python 子进程，执行 main.py 并传入文件路径
-  if (VITE_DEV_SERVER_URL) {
-    pyScriptPath = path.join(app.getAppPath(), 'src', 'pythons', 'main.py')
-  } else {
-    pyScriptPath = path.join(process.resourcesPath, 'pythons', 'main.py')
-  }
+ipcMain.handle('py:process', async (_, filePath: string, pythonScriptName: string, expectJson = false) => {
+  const userDataPath = app.getPath('userData')
+  let pyScriptPath = VITE_DEV_SERVER_URL
+    ? path.join(app.getAppPath(), 'src', 'pythons', pythonScriptName)
+    : path.join(process.resourcesPath, 'pythons', pythonScriptName)
 
   console.log('调用 Python 脚本:', pyScriptPath, filePath, userDataPath)
 
-  const py = spawn('python', [
-    '-u',
-    pyScriptPath,
-    filePath,
-    userDataPath
-  ])
-
-  // 监听 Python 标准输出, 并将输出通过 IPC 发送回渲染进程
-  py.stdout.on('data', (chunk) => {
-    _.sender.send('py:output', chunk.toString('utf8'))
+  // 调用Python
+  const py = spawn('python', ['-u', pyScriptPath, filePath, userDataPath], {
+    stdio: 'pipe'
   })
-  // 监听 Python 错误输出, 并将错误通过 IPC 发送回渲染进程
+
+  // 收集最后JSON输出
+  let stdoutData = ''
   py.stderr.on('data', (chunk) => {
-    console.error('Python stderr:', chunk.toString('utf8'))
-    _.sender.send('py:error', chunk.toString('utf8')) // 可选：推送错误
+    const logMsg = chunk.toString('utf8')
+    console.log('Python 日志:', logMsg.trim())
+    _.sender.send('py:log', logMsg) // 前端监听 'py:log'
+  })
+
+  py.stdout.on('data', (chunk) => {
+    stdoutData += chunk.toString('utf8')
   })
 
   return new Promise((resolve, reject) => {
     // 子进程退出时处理结果
     py.on('close', (code) => {
       // 非零退出码视为错误
-      if (code !== 0) return reject(new Error(`Python exit ${code}`))
-      // 成功时返回 Python 的 stdout 内容（去除首尾空白）
-      resolve("处理完成!")
+      if (code !== 0) return reject(new Error(`Python 脚本异常退出 ${code}`))
+      else if(expectJson){
+        try {
+          resolve(JSON.parse(stdoutData.trim()))
+        } catch (e) {
+          reject(new Error('期望 JSON 但未收到'))
+        }
+      } else {
+        resolve({ stdout: stdoutData })
+      }
+    })
+
+    py.on('error', (err) => {
+      reject(new Error(`启动 Python 失败: ${err.message}`))
     })
   })
 })
