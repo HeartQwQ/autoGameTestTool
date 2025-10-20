@@ -19,7 +19,7 @@ def convert_to_json():
         json_data = df.to_dict(orient='records')
 
         # 获取桌面路径
-        output_path = os.path.join(Path("../json"), "数值表.json")
+        output_path = os.path.join("data.json")
 
         # 写入 JSON 文件
         with open(output_path, 'w', encoding='utf-8') as f:
