@@ -39,7 +39,7 @@ def exchange_shop_exchange_before(self, name, frame_res, img, logger, stage_dir)
 
         # 用物品名称保存图片
         output_path = str(stage_dir / f"{name}_{item_name}_{shard_num}.jpg")
-        cv2.imwrite(output_path, img)
+        cv2.imencode(".jpg", img)[1].tofile(output_path)
 
     if not target:
         logger.info("🔍 仓库界面已加载，但未发现新目标物品")

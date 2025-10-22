@@ -1,21 +1,52 @@
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 use std::path::PathBuf;
 use std::process::Command;
-use tauri::{Manager, Runtime};
+use tauri::Manager;
 
 #[tauri::command]
-async fn process_video<R: Runtime>(
-    app: tauri::AppHandle<R>,
+async fn process_video(
+    app: tauri::AppHandle,
     video_path: String,
 ) -> Result<String, String> {
     // 1. 获取 Python 脚本路径
-    let resource_dir = app
-        .path()
-        .resource_dir()
-        .map_err(|e| format!("Failed to get resource dir: {}", e))?;
-
-    let python_exe = resource_dir.join("python").join("pythonw.exe");
-    let script_path = resource_dir.join("src-python").join("video_processor.py");
+    // 在开发环境中，我们需要使用不同的路径查找python
+    #[cfg(debug_assertions)]
+    let python_exe = {
+        // 开发环境下，直接在src-tauri目录下查找python
+        let mut python_path = std::env::current_dir()
+            .map_err(|e| format!("Failed to get current dir: {}", e))?;
+        python_path.push("python");
+        python_path.push("pythonw.exe");
+        python_path
+    };
+    
+    #[cfg(not(debug_assertions))]
+    let python_exe = {
+        let resource_dir = app
+            .path()
+            .resource_dir()
+            .map_err(|e| format!("Failed to get resource dir: {}", e))?;
+        resource_dir.join("python").join("pythonw.exe")
+    };
+    
+    #[cfg(debug_assertions)]
+    let script_path = {
+        // 开发环境下，直接在src-tauri目录下查找脚本
+        let mut script_path = std::env::current_dir()
+            .map_err(|e| format!("Failed to get current dir: {}", e))?;
+        script_path.push("src-python");
+        script_path.push("video_processor.py");
+        script_path
+    };
+    
+    #[cfg(not(debug_assertions))]
+    let script_path = {
+        let resource_dir = app
+            .path()
+            .resource_dir()
+            .map_err(|e| format!("Failed to get resource dir: {}", e))?;
+        resource_dir.join("src-python").join("video_processor.py")
+    };
 
     // 安全检查
     if !python_exe.exists() {

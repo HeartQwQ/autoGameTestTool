@@ -1,4 +1,12 @@
+import re
+
 import cv2
+
+
+def normalize_for_upgrade(text: str) -> str:
+    """仅对「可升级道具」尝试剥离等级后缀"""
+    # 只剥离末尾的「数字+级」，且保留原始文本以防误伤
+    return re.sub(r'\d+[级]?$', '', text).rstrip()
 
 
 def exchange_shop_after(self, name, frame_res, img, logger, stage_dir):
@@ -22,13 +30,18 @@ def exchange_shop_after(self, name, frame_res, img, logger, stage_dir):
             if cleaned_text not in self.data_name or cleaned_text in self.hit[name]:
                 continue
 
+            item_name = normalize_for_upgrade(cleaned_text)
+
+            if item_name not in self.data_name or item_name in self.hit[name]:
+                continue
+
             target = True
-            self.hit[name].add(cleaned_text)     # 识别到的加入集合，避免重复识别
-            logger.info(f"🎯 识别到目标物品：{cleaned_text}")
+            self.hit[name].add(item_name)     # 识别到的加入集合，避免重复识别
+            logger.info(f"🎯 识别到目标物品：{item_name}")
 
             # 保存原图
-            output_path = str(stage_dir / f"{name}_{cleaned_text}.jpg")
-            cv2.imwrite(output_path, img)
+            output_path = str(stage_dir / f"{name}_{item_name}.jpg")
+            cv2.imencode(".jpg", img)[1].tofile(output_path)
 
     if not target:
         logger.info("🔍 仓库界面已加载，但未发现新目标物品")

@@ -19,7 +19,7 @@ if __name__ == "__main__":
             "use_doc_orientation_classify": False,                  # 不使用文档方向分类
             "use_doc_unwarping": False,                             # 不使用文档扭曲矫正
             "use_textline_orientation": False,                      # 不使用文本行方向分类
-            "text_recognition_batch_size": 64,                      # OCR识别批次大小, 越大越快但显存占用越高
+            "text_recognition_batch_size": 32,                      # OCR识别批次大小, 越大越快但显存占用越高
             # 文本检测模型, 推荐 v5_mobile 速度更快，精度损失不大
             "text_detection_model_name": "PP-OCRv5_mobile_det",
             # OCR识别模型, 推荐 v5_server 速度损失不多，但精度更高
